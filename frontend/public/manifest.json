@@ -1,0 +1,17 @@
+{
+  "short_name": "JARVIS",
+  "name": "J.A.R.V.I.S. — Personal AI Assistant",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#070B14",
+  "theme_color": "#070B14",
+  "display": "standalone",
+  "orientation": "portrait"
+}
