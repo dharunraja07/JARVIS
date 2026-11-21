@@ -1,0 +1,15 @@
+{
+  "appId": "io.jarvis.assistant",
+  "appName": "JARVIS",
+  "webDir": "frontend/dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "cleartext": true,
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

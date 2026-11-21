@@ -1,6 +1,5 @@
 import type { CurrencyConversion, NewsArticle, SearchResult, WeatherData } from '../../types';
-
-const COMPANION_URL = 'http://127.0.0.1:8000';
+import { getApiBaseUrl } from './apiConfig';
 
 // ============================================================================
 // WEATHER SERVICE (Uses backend /api/weather with Open-Meteo direct fallback)
@@ -13,7 +12,7 @@ export async function fetchWeather(city: string): Promise<WeatherData> {
 
   // 1. Try backend companion API first
   try {
-    const res = await fetch(`${COMPANION_URL}/api/weather?city=${encodeURIComponent(cleanCity)}`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/weather?city=${encodeURIComponent(cleanCity)}`, {
       signal: AbortSignal.timeout(3000),
     });
     if (res.ok) {
@@ -128,7 +127,7 @@ export async function convertCurrency(
   // 1. Try backend companion API first
   try {
     const res = await fetch(
-      `${COMPANION_URL}/api/currency?amount=${amount}&from=${cleanFrom}&to=${cleanTo}`,
+      `${getApiBaseUrl()}/api/currency?amount=${amount}&from=${cleanFrom}&to=${cleanTo}`,
       { signal: AbortSignal.timeout(3000) }
     );
     if (res.ok) {
@@ -162,7 +161,7 @@ export async function convertCurrency(
 // ============================================================================
 export async function fetchNews(category: string = 'technology'): Promise<NewsArticle[]> {
   try {
-    const res = await fetch(`${COMPANION_URL}/api/news?category=${encodeURIComponent(category)}&limit=6`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/news?category=${encodeURIComponent(category)}&limit=6`, {
       signal: AbortSignal.timeout(5000),
     });
     if (res.ok) {
@@ -190,7 +189,7 @@ export async function performWebSearch(query: string): Promise<SearchResult[]> {
   if (!clean) return [];
 
   try {
-    const res = await fetch(`${COMPANION_URL}/api/search?q=${encodeURIComponent(clean)}&limit=5`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/search?q=${encodeURIComponent(clean)}&limit=5`, {
       signal: AbortSignal.timeout(8000),
     });
     if (res.ok) {

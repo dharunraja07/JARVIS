@@ -1,19 +1,14 @@
 import type { MemoryCategory, MemoryItem } from '../../types';
+import { getApiBaseUrl } from './apiConfig';
 
 class MemoryService {
-  private companionUrl: string;
-
-  constructor() {
-    this.companionUrl = 'http://127.0.0.1:8000';
-  }
-
-  public setCompanionUrl(url: string) {
-    this.companionUrl = url;
+  public getCompanionUrl(): string {
+    return getApiBaseUrl();
   }
 
   public async fetchMemories(): Promise<{ memories: MemoryItem[]; isLiveBackend: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.companionUrl}/api/memories`, {
+      const response = await fetch(`${this.getCompanionUrl()}/api/memories`, {
         signal: AbortSignal.timeout(3000),
       });
       if (response.ok) {
@@ -36,7 +31,7 @@ class MemoryService {
     content: string
   ): Promise<{ success: boolean; memory?: MemoryItem; error?: string }> {
     try {
-      const response = await fetch(`${this.companionUrl}/api/memories`, {
+      const response = await fetch(`${this.getCompanionUrl()}/api/memories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, content }),
@@ -58,7 +53,7 @@ class MemoryService {
 
   public async deleteMemory(id: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.companionUrl}/api/memories/${id}`, {
+      const response = await fetch(`${this.getCompanionUrl()}/api/memories/${id}`, {
         method: 'DELETE',
         signal: AbortSignal.timeout(3000),
       });

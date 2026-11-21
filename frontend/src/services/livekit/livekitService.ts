@@ -8,6 +8,7 @@ import {
   type TranscriptionSegment,
 } from 'livekit-client';
 import type { AssistantState } from '../../types';
+import { getApiBaseUrl, getClientDeviceType } from '../api/apiConfig';
 
 export interface LiveKitCallbacks {
   onStateChange: (state: AssistantState) => void;
@@ -42,18 +43,24 @@ class LiveKitVoiceService {
    * and connect to the LiveKit voice room. Never exposes secrets to frontend.
    */
   public async fetchTokenAndConnect(
-    companionUrl: string = 'http://127.0.0.1:8000',
+    companionUrl?: string,
     roomName: string = 'jarvis-room',
     identity?: string
   ): Promise<boolean> {
     this.callbacks?.onStateChange('connecting');
 
+    const targetUrl = companionUrl || getApiBaseUrl();
+    const deviceType = getClientDeviceType();
+
     try {
-      const params = new URLSearchParams({ room: roomName });
+      const params = new URLSearchParams({ room: roomName, device: deviceType });
       if (identity) params.set('identity', identity);
 
-      const res = await fetch(`${companionUrl}/api/livekit/token?${params.toString()}`, {
-        headers: { Accept: 'application/json' },
+      const res = await fetch(`${targetUrl}/api/livekit/token?${params.toString()}`, {
+        headers: {
+          Accept: 'application/json',
+          'X-JARVIS-CLIENT-DEVICE': deviceType,
+        },
       });
 
       if (!res.ok) {

@@ -1,0 +1,12 @@
+{
+  "name": "jarvis-desktop",
+  "version": "1.0.0",
+  "description": "JARVIS AI Voice Assistant — Windows Desktop",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {
+    "electron": "^33.2.0"
+  }
+}

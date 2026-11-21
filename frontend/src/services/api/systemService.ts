@@ -1,14 +1,9 @@
 import type { SystemMetrics } from '../../types';
+import { getApiBaseUrl } from './apiConfig';
 
 class SystemService {
-  private companionUrl: string;
-
-  constructor() {
-    this.companionUrl = 'http://127.0.0.1:8000';
-  }
-
-  public setCompanionUrl(url: string) {
-    this.companionUrl = url;
+  public getCompanionUrl(): string {
+    return getApiBaseUrl();
   }
 
   public async fetchSystemMetrics(): Promise<{
@@ -17,11 +12,19 @@ class SystemService {
     error?: string;
   }> {
     try {
-      const response = await fetch(`${this.companionUrl}/api/system`, {
+      const response = await fetch(`${this.getCompanionUrl()}/api/system`, {
         signal: AbortSignal.timeout(3000),
       });
       if (response.ok) {
         const data = await response.json();
+        // Check if the paired Windows device is online
+        if (data.online === false) {
+          return {
+            metrics: null,
+            isLiveBackend: false,
+            error: data.message || 'Paired Windows workstation is offline or sleeping.',
+          };
+        }
         return { metrics: data, isLiveBackend: true };
       }
     } catch {
