@@ -11,6 +11,8 @@ import {
   Shield,
   Save,
   Check,
+  Activity,
+  Key,
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { livekitService } from '../services/livekit/livekitService';
@@ -32,25 +34,40 @@ export const Settings: React.FC = () => {
 
   const [isSaved, setIsSaved] = useState(false);
   const [testingLiveKit, setTestingLiveKit] = useState(false);
+  const [gatewayStatus, setGatewayStatus] = useState<string | null>(null);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     updatePreferences(form);
     setIsSaved(true);
-    showToast('Preferences successfully updated and saved to storage.', 'success');
+    showToast('Preferences successfully updated.', 'success');
     setTimeout(() => setIsSaved(false), 2000);
   };
 
-  const handleTestLiveKit = async () => {
-    if (!form.livekitToken) {
-      showToast('Please enter a LiveKit Token to test connection.', 'warning');
-      return;
-    }
+  const handleTestBackendGateway = async () => {
     setTestingLiveKit(true);
-    const success = await livekitService.connect(form.livekitServerUrl, form.livekitToken);
-    setTestingLiveKit(false);
-    if (success) {
-      showToast('LiveKit connection established successfully!', 'success');
+    setGatewayStatus(null);
+    try {
+      const companionUrl = form.companionApiUrl || 'http://127.0.0.1:8000';
+      const healthRes = await fetch(`${companionUrl}/api/health`);
+      if (!healthRes.ok) {
+        throw new Error(`Companion server returned HTTP ${healthRes.status}`);
+      }
+      const health = await healthRes.json();
+
+      const success = await livekitService.fetchTokenAndConnect(companionUrl, 'jarvis-room');
+      if (success) {
+        setGatewayStatus(`Gateway connected. Service: ${health.service} (${health.version})`);
+        showToast('Connected to JARVIS LiveKit session successfully!', 'success');
+      } else {
+        setGatewayStatus('Token generated, but LiveKit room connection failed. Check LiveKit Cloud connectivity.');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Backend connection error.';
+      setGatewayStatus(`Connection failed: ${msg}`);
+      showToast(msg, 'error');
+    } finally {
+      setTestingLiveKit(false);
     }
   };
 
@@ -152,11 +169,11 @@ export const Settings: React.FC = () => {
           </div>
         </div>
 
-        {/* LiveKit Cloud & Server Connection */}
+        {/* Backend Companion & LiveKit Gateway */}
         <div className="p-5 rounded-2xl glass-panel border border-slate-700/60 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-slate-200 light:text-slate-800 flex items-center gap-2">
-              <Server size={16} className="text-blue-400" /> LiveKit Voice Cloud WebRTC Mesh
+              <Server size={16} className="text-blue-400" /> Backend Companion & LiveKit Gateway
             </h3>
             <span className="text-xs font-mono text-cyan-400 uppercase">
               STATUS: {assistantState.toUpperCase()}
@@ -166,44 +183,47 @@ export const Settings: React.FC = () => {
           <div className="space-y-3">
             <div>
               <label className="block text-xs font-mono text-slate-400 mb-1">
-                LIVEKIT SERVER WEBSOCKET URL
+                COMPANION API ENDPOINT URL
               </label>
               <input
                 type="text"
-                value={form.livekitServerUrl}
-                onChange={(e) => setForm({ ...form, livekitServerUrl: e.target.value })}
-                placeholder="wss://your-project.livekit.cloud"
-                className="w-full py-2.5 px-3 rounded-xl glass-panel border border-cyan-500/30 text-sm font-mono text-slate-100 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono text-slate-400 mb-1">
-                LIVEKIT ACCESS TOKEN (CLIENT TOKEN)
-              </label>
-              <input
-                type="password"
-                value={form.livekitToken}
-                onChange={(e) => setForm({ ...form, livekitToken: e.target.value })}
-                placeholder="eyJhbGciOi..."
+                value={form.companionApiUrl}
+                onChange={(e) => setForm({ ...form, companionApiUrl: e.target.value })}
+                placeholder="http://127.0.0.1:8000"
                 className="w-full py-2.5 px-3 rounded-xl glass-panel border border-cyan-500/30 text-sm font-mono text-slate-100 focus:outline-none"
               />
               <p className="text-[11px] text-slate-400 mt-1">
-                Never commit API secrets. For development, generate a client token from LiveKit Cloud console.
+                Local companion provides LiveKit token dispatch, SQLite memory CRUD, and host telemetry.
               </p>
             </div>
 
-            <div className="pt-1">
+            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-start gap-2.5 text-xs text-slate-300">
+              <Key size={16} className="text-cyan-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-slate-200">Zero-Secret Security:</span> LiveKit API
+                Key and Secret remain strictly on the backend server. The client automatically requests
+                ephemeral JWT tokens on demand.
+              </div>
+            </div>
+
+            <div className="pt-1 flex flex-wrap items-center gap-3">
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                onClick={handleTestLiveKit}
+                onClick={handleTestBackendGateway}
                 disabled={testingLiveKit}
+                icon={<Activity size={14} className={testingLiveKit ? 'animate-spin' : ''} />}
               >
-                {testingLiveKit ? 'Connecting...' : 'Test LiveKit Connection'}
+                {testingLiveKit ? 'Testing Gateway...' : 'Test Gateway & Connect Voice'}
               </Button>
             </div>
+
+            {gatewayStatus && (
+              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-xs font-mono text-cyan-300">
+                {gatewayStatus}
+              </div>
+            )}
           </div>
         </div>
 

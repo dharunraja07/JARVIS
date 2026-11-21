@@ -1,5 +1,4 @@
 import type { MemoryCategory, MemoryItem } from '../../types';
-import { INITIAL_MEMORIES } from '../../utils/constants';
 
 class MemoryService {
   private companionUrl: string;
@@ -12,10 +11,10 @@ class MemoryService {
     this.companionUrl = url;
   }
 
-  public async fetchMemories(): Promise<{ memories: MemoryItem[]; isLiveBackend: boolean }> {
+  public async fetchMemories(): Promise<{ memories: MemoryItem[]; isLiveBackend: boolean; error?: string }> {
     try {
       const response = await fetch(`${this.companionUrl}/api/memories`, {
-        signal: AbortSignal.timeout(1500),
+        signal: AbortSignal.timeout(3000),
       });
       if (response.ok) {
         const data = await response.json();
@@ -25,62 +24,55 @@ class MemoryService {
       // Backend companion REST endpoint is not running
     }
 
-    // Fallback to local storage or defaults
-    const local = localStorage.getItem('jarvis-memories');
-    if (local) {
-      try {
-        return { memories: JSON.parse(local), isLiveBackend: false };
-      } catch {
-        // ignore
-      }
-    }
-
-    return { memories: INITIAL_MEMORIES, isLiveBackend: false };
+    return {
+      memories: [],
+      isLiveBackend: false,
+      error: 'Backend SQLite memory service offline. Start companion API to load memories.',
+    };
   }
 
   public async createMemory(
     category: MemoryCategory,
     content: string
-  ): Promise<{ success: boolean; memory: MemoryItem }> {
-    const newMemory: MemoryItem = {
-      id: Date.now(),
-      category,
-      content: content.trim(),
-      created_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      updated_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-    };
-
+  ): Promise<{ success: boolean; memory?: MemoryItem; error?: string }> {
     try {
       const response = await fetch(`${this.companionUrl}/api/memories`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ category, content }),
-        signal: AbortSignal.timeout(1500),
+        signal: AbortSignal.timeout(3000),
       });
       if (response.ok) {
         const saved = await response.json();
         return { success: true, memory: saved };
       }
-    } catch {
-      // Offline fallback
+      const err = await response.json().catch(() => ({}));
+      return { success: false, error: err.error || `HTTP ${response.status}` };
+    } catch (err: unknown) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Companion API unreachable.',
+      };
     }
-
-    return { success: true, memory: newMemory };
   }
 
-  public async deleteMemory(id: number): Promise<{ success: boolean }> {
+  public async deleteMemory(id: number): Promise<{ success: boolean; error?: string }> {
     try {
       const response = await fetch(`${this.companionUrl}/api/memories/${id}`, {
         method: 'DELETE',
-        signal: AbortSignal.timeout(1500),
+        signal: AbortSignal.timeout(3000),
       });
       if (response.ok) {
         return { success: true };
       }
-    } catch {
-      // Offline fallback
+      const err = await response.json().catch(() => ({}));
+      return { success: false, error: err.error || `HTTP ${response.status}` };
+    } catch (err: unknown) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Companion API unreachable.',
+      };
     }
-    return { success: true };
   }
 }
 

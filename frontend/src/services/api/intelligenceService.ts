@@ -1,7 +1,9 @@
 import type { CurrencyConversion, NewsArticle, SearchResult, WeatherData } from '../../types';
 
+const COMPANION_URL = 'http://127.0.0.1:8000';
+
 // ============================================================================
-// WEATHER SERVICE (Uses Open-Meteo API matching src/weather.py)
+// WEATHER SERVICE (Uses backend /api/weather with Open-Meteo direct fallback)
 // ============================================================================
 export async function fetchWeather(city: string): Promise<WeatherData> {
   const cleanCity = city.trim();
@@ -9,7 +11,31 @@ export async function fetchWeather(city: string): Promise<WeatherData> {
     throw new Error('Please enter a city name.');
   }
 
-  // 1. Geocode city
+  // 1. Try backend companion API first
+  try {
+    const res = await fetch(`${COMPANION_URL}/api/weather?city=${encodeURIComponent(cleanCity)}`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return {
+        city: `${data.location}${data.country ? `, ${data.country}` : ''}`,
+        temperature: Math.round(data.temperature),
+        condition: data.condition || 'Clear',
+        weather_code: 0,
+        humidity: data.humidity || 60,
+        wind_speed: Math.round(data.wind_speed || 10),
+        min_temp: Math.round(data.min_temperature || data.temperature - 4),
+        max_temp: Math.round(data.max_temperature || data.temperature + 5),
+        precipitation_probability: data.rain_probability || 0,
+        timestamp: data.local_time || new Date().toLocaleTimeString(),
+      };
+    }
+  } catch {
+    // Companion API unavailable; proceed to direct Open-Meteo API
+  }
+
+  // 2. Direct Open-Meteo API (matches backend logic)
   const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
     cleanCity
   )}&count=1&language=en&format=json`;
@@ -21,17 +47,16 @@ export async function fetchWeather(city: string): Promise<WeatherData> {
   const geoData = await geoRes.json();
 
   if (!geoData.results || geoData.results.length === 0) {
-    throw new Error(`City "${cleanCity}" not found. Please check spelling.`);
+    throw new Error(`Location "${cleanCity}" not found. Please verify spelling.`);
   }
 
   const { latitude, longitude, name, country } = geoData.results[0];
 
-  // 2. Fetch forecast
   const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto`;
 
   const weatherRes = await fetch(weatherUrl);
   if (!weatherRes.ok) {
-    throw new Error('Failed to fetch weather forecast.');
+    throw new Error('Failed to retrieve atmospheric telemetry.');
   }
   const data = await weatherRes.json();
 
@@ -79,7 +104,7 @@ function getWeatherCondition(code: number): string {
 }
 
 // ============================================================================
-// CURRENCY SERVICE (Uses Frankfurter API matching src/currency.py)
+// CURRENCY SERVICE (Uses backend /api/currency with Frankfurter direct fallback)
 // ============================================================================
 export async function convertCurrency(
   amount: number,
@@ -100,6 +125,20 @@ export async function convertCurrency(
     };
   }
 
+  // 1. Try backend companion API first
+  try {
+    const res = await fetch(
+      `${COMPANION_URL}/api/currency?amount=${amount}&from=${cleanFrom}&to=${cleanTo}`,
+      { signal: AbortSignal.timeout(3000) }
+    );
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    // Proceed to direct Frankfurter API
+  }
+
+  // 2. Direct Frankfurter API
   const url = `https://api.frankfurter.dev/v2/rate/${cleanFrom}/${cleanTo}`;
   const res = await fetch(url);
   if (!res.ok) {
@@ -119,113 +158,64 @@ export async function convertCurrency(
 }
 
 // ============================================================================
-// NEWS SERVICE
+// NEWS SERVICE (Calls backend /api/news using real RSS feed parsing)
 // ============================================================================
 export async function fetchNews(category: string = 'technology'): Promise<NewsArticle[]> {
-  // Curated recent headlines with realistic live news fallback
-  const newsBank: Record<string, NewsArticle[]> = {
-    technology: [
-      {
-        title: 'OpenAI and DeepMind Unveil Next-Gen Autonomous Agent Architectures',
-        source: 'MIT Technology Review',
-        link: 'https://news.google.com',
-        published: '2 hours ago',
-        snippet: 'Novel agent frameworks prioritize tool reasoning, real-time voice latency, and persistent long-term episodic memory.',
-      },
-      {
-        title: 'Next-Generation Neural Voice Interfaces Transform Human-Computer Interaction',
-        source: 'TechCrunch',
-        link: 'https://news.google.com',
-        published: '3 hours ago',
-        snippet: 'Ultra-low latency speech-to-speech models achieve conversational flow under 300ms, making personal AI assistants mainstream.',
-      },
-      {
-        title: 'Quantum Computing Breakthrough: Error Mitigation Achieves Milestone in 1000-Qubit Systems',
-        source: 'Nature Tech',
-        link: 'https://news.google.com',
-        published: '5 hours ago',
-        snippet: 'Researchers demonstrate fault-tolerant logical qubits operating over 10x longer coherence lifetimes.',
-      },
-    ],
-    india: [
-      {
-        title: 'India Semiconductor Mission Announces Expansion of Advanced Fabrication Hubs',
-        source: 'The Economic Times',
-        link: 'https://news.google.com',
-        published: '1 hour ago',
-        snippet: 'Major domestic and global investments pave the way for sovereign high-performance computing chip development in India.',
-      },
-      {
-        title: 'ISRO Gears Up for Next Phase of Gaganyaan Human Spaceflight Mission',
-        source: 'The Hindu',
-        link: 'https://news.google.com',
-        published: '4 hours ago',
-        snippet: 'Comprehensive qualification tests of crew module and propulsion systems reach final validation stages.',
-      },
-    ],
-    world: [
-      {
-        title: 'Global AI Summit Unveils International Framework for Responsible Agent Governance',
-        source: 'Reuters',
-        link: 'https://news.google.com',
-        published: '2 hours ago',
-        snippet: 'Tech leaders and policymakers agree on common safety evaluation criteria for autonomous agent actions and computer-use tools.',
-      },
-      {
-        title: 'Renewable Energy Surpasses 35% of Global Grid Generation Milestone',
-        source: 'Bloomberg',
-        link: 'https://news.google.com',
-        published: '6 hours ago',
-        snippet: 'Rapid deployment of solar, offshore wind, and battery storage systems accelerates international clean energy transition.',
-      },
-    ],
-    ai: [
-      {
-        title: 'Gemma & Gemini Multimodal Agent Models Advance On-Device Voice Reasoning',
-        source: 'Google DeepMind Blog',
-        link: 'https://news.google.com',
-        published: '1 hour ago',
-        snippet: 'Combining structured tool dispatch with sub-second voice synthesis empowers high-performance personal assistants.',
-      },
-      {
-        title: 'Autonomous Coding Agents Reach 80% Benchmark on Real-World Software Repositories',
-        source: 'ArXiv AI',
-        link: 'https://news.google.com',
-        published: '4 hours ago',
-        snippet: 'Long-horizon planning, sandboxed execution, and iterative self-repair drastically reduce development cycles.',
-      },
-    ],
-  };
+  try {
+    const res = await fetch(`${COMPANION_URL}/api/news?category=${encodeURIComponent(category)}&limit=6`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const items = await res.json();
+      return items.map((item: { title: string; link: string; published: string; snippet?: string; source?: string }) => ({
+        title: item.title,
+        source: item.source || 'News Wire',
+        link: item.link,
+        published: item.published,
+        snippet: item.snippet || '',
+      }));
+    }
+  } catch {
+    // Companion unreachable
+  }
 
-  return newsBank[category] || newsBank.technology;
+  throw new Error('News feed service unavailable. Ensure JARVIS companion backend is running.');
 }
 
 // ============================================================================
-// WEB SEARCH SERVICE
+// WEB SEARCH SERVICE (Calls backend /api/search using real DDGS)
 // ============================================================================
 export async function performWebSearch(query: string): Promise<SearchResult[]> {
   const clean = query.trim();
   if (!clean) return [];
 
-  // Provide realistic search results matching backend ddgs functionality
-  return [
-    {
-      title: `${clean} — Comprehensive Documentation and Latest Insights`,
-      snippet: `Explore official specifications, architectural patterns, and real-time implementations regarding ${clean}. Verified against latest standards.`,
-      url: `https://www.google.com/search?q=${encodeURIComponent(clean)}`,
-      domain: 'google.com',
-    },
-    {
-      title: `Latest Research and Industry Developments: ${clean}`,
-      snippet: `In-depth analysis of emerging paradigms, benchmark performance comparisons, and production-grade integration guides for ${clean}.`,
-      url: `https://duckduckgo.com/?q=${encodeURIComponent(clean)}`,
-      domain: 'duckduckgo.com',
-    },
-    {
-      title: `GitHub Open Source Projects & Repositories for ${clean}`,
-      snippet: `Browse trending repositories, active developer discussions, and battle-tested libraries supporting ${clean}.`,
-      url: `https://github.com/search?q=${encodeURIComponent(clean)}`,
-      domain: 'github.com',
-    },
-  ];
+  try {
+    const res = await fetch(`${COMPANION_URL}/api/search?q=${encodeURIComponent(clean)}&limit=5`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (res.ok) {
+      const results = await res.json();
+      if (Array.isArray(results) && results.length > 0) {
+        return results.map((r: { title?: string; url?: string; href?: string; snippet?: string; body?: string }) => {
+          const url = r.url || r.href || '';
+          let domain = 'web';
+          try {
+            if (url) domain = new URL(url).hostname;
+          } catch {
+            // ignore
+          }
+          return {
+            title: r.title || clean,
+            snippet: r.snippet || r.body || '',
+            url,
+            domain,
+          };
+        });
+      }
+    }
+  } catch {
+    // Companion unreachable
+  }
+
+  throw new Error('Web search service unavailable. Ensure JARVIS companion backend is running.');
 }

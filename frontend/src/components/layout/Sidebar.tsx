@@ -96,31 +96,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-3 border-t border-slate-800/60 light:border-slate-300/60 space-y-3">
         {!isCollapsed ? (
           <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 space-y-2 text-xs">
-            <div className="flex items-center justify-between text-slate-400">
-              <span className="flex items-center gap-1.5 font-mono text-[11px]">
-                <Activity size={13} className="text-cyan-400" /> CPU LOAD
-              </span>
-              <span className="font-mono text-cyan-300">{systemMetrics.cpu.usage}%</span>
-            </div>
-            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-blue-500 to-cyan-400 h-full transition-all duration-500"
-                style={{ width: `${Math.min(100, systemMetrics.cpu.usage)}%` }}
-              />
-            </div>
+            {systemMetrics ? (
+              <>
+                <div className="flex items-center justify-between text-slate-400">
+                  <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                    <Activity size={13} className="text-cyan-400" /> CPU LOAD
+                  </span>
+                  <span className="font-mono text-cyan-300">{systemMetrics.cpu.usage}%</span>
+                </div>
+                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-cyan-400 h-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, systemMetrics.cpu.usage)}%` }}
+                  />
+                </div>
 
-            <div className="flex items-center justify-between text-slate-400 pt-1">
-              <span className="flex items-center gap-1.5 font-mono text-[11px]">
-                <ShieldCheck size={13} className="text-emerald-400" /> RAM
-              </span>
-              <span className="font-mono text-emerald-300">
-                {systemMetrics.memory.used_gb} / {systemMetrics.memory.total_gb} GB
-              </span>
-            </div>
+                <div className="flex items-center justify-between text-slate-400 pt-1">
+                  <span className="flex items-center gap-1.5 font-mono text-[11px]">
+                    <ShieldCheck size={13} className="text-emerald-400" /> RAM
+                  </span>
+                  <span className="font-mono text-emerald-300">
+                    {systemMetrics.memory.used_gb} / {systemMetrics.memory.total_gb} GB
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="text-[11px] font-mono text-slate-500 text-center py-1">
+                HOST TELEMETRY STANDBY
+              </div>
+            )}
           </div>
         ) : (
-          <div className="flex justify-center py-2" title={`CPU: ${systemMetrics.cpu.usage}%`}>
-            <Activity size={18} className="text-cyan-400 animate-pulse" />
+          <div className="flex justify-center py-2" title={systemMetrics ? `CPU: ${systemMetrics.cpu.usage}%` : 'Companion Offline'}>
+            <Activity size={18} className={systemMetrics ? 'text-cyan-400 animate-pulse' : 'text-slate-600'} />
           </div>
         )}
       </div>

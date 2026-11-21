@@ -1,49 +1,11 @@
-import type { MemoryItem, UserPreferences } from '../types';
-
-export const INITIAL_MEMORIES: MemoryItem[] = [
-  {
-    id: 1,
-    category: 'Education',
-    content: 'I am learning Python and Machine Learning.',
-    created_at: '2026-11-21 03:33:18',
-    updated_at: '2026-11-21 03:33:18',
-  },
-  {
-    id: 2,
-    category: 'Projects',
-    content: 'I am developing JARVIS using Python and LiveKit.',
-    created_at: '2026-11-21 03:33:18',
-    updated_at: '2026-11-21 03:33:18',
-  },
-  {
-    id: 3,
-    category: 'Career',
-    content: 'My goal is to prepare for software engineering placements.',
-    created_at: '2026-11-21 03:33:18',
-    updated_at: '2026-11-21 03:33:18',
-  },
-  {
-    id: 4,
-    category: 'Education',
-    content: 'I am learning deep learning architectures and neural voice models.',
-    created_at: '2026-11-21 03:47:40',
-    updated_at: '2026-11-21 03:47:40',
-  },
-  {
-    id: 5,
-    category: 'Education',
-    content: 'I am learning Java and Object-Oriented Design patterns.',
-    created_at: '2026-11-21 06:48:22',
-    updated_at: '2026-11-21 06:48:22',
-  },
-];
+import type { UserPreferences } from '../types';
 
 export const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'dark',
   language: 'English',
   autoSpeak: true,
   voiceSpeed: 1.0,
-  livekitServerUrl: 'wss://jarvis-livekit.cloud',
+  livekitServerUrl: '',
   livekitToken: '',
   companionApiUrl: 'http://127.0.0.1:8000',
   lowPowerMode: false,

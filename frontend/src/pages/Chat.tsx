@@ -45,6 +45,19 @@ export const Chat: React.FC = () => {
 
       {/* Messages Scroll Viewport */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 custom-scroll">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-3">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-blue-600/20 text-cyan-400 border border-cyan-400/30">
+              <Bot size={24} />
+            </div>
+            <h3 className="text-base font-semibold text-slate-200">Neural Conversation Ready</h3>
+            <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
+              Activate the microphone or send a command to start a dialogue with JARVIS.
+              LiveKit audio transcription and assistant TTS speech will be rendered here.
+            </p>
+          </div>
+        )}
+
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}

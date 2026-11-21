@@ -1,17 +1,20 @@
 {
   "short_name": "JARVIS",
-  "name": "J.A.R.V.I.S. — Personal AI Assistant",
+  "name": "J.A.R.V.I.S. — Autonomous Personal AI Assistant",
+  "description": "Futuristic AI Voice Assistant with LiveKit Agents, Persistent SQLite Memory, and System Telemetry",
   "icons": [
     {
       "src": "/favicon.svg",
       "type": "image/svg+xml",
-      "sizes": "512x512",
+      "sizes": "192x192 512x512",
       "purpose": "any maskable"
     }
   ],
   "start_url": "/",
+  "scope": "/",
   "background_color": "#070B14",
   "theme_color": "#070B14",
   "display": "standalone",
-  "orientation": "portrait"
+  "orientation": "any",
+  "categories": ["utilities", "productivity"]
 }

@@ -2,13 +2,12 @@ import { create } from 'zustand';
 import type {
   AssistantState,
   ChatMessage,
-  MemoryCategory,
   MemoryItem,
   SystemMetrics,
   ThemeMode,
   UserPreferences,
 } from '../types';
-import { DEFAULT_PREFERENCES, INITIAL_MEMORIES } from '../utils/constants';
+import { DEFAULT_PREFERENCES } from '../utils/constants';
 
 interface Toast {
   id: string;
@@ -37,12 +36,15 @@ interface JarvisStore {
 
   // Memories
   memories: MemoryItem[];
-  addMemory: (category: MemoryCategory, content: string) => void;
-  deleteMemory: (id: number) => void;
+  setMemories: (memories: MemoryItem[]) => void;
+  addMemoryRecord: (memory: MemoryItem) => void;
+  deleteMemoryRecord: (id: number) => void;
+  isLoadingMemories: boolean;
+  setIsLoadingMemories: (loading: boolean) => void;
 
   // System Metrics
-  systemMetrics: SystemMetrics;
-  setSystemMetrics: (metrics: Partial<SystemMetrics>) => void;
+  systemMetrics: SystemMetrics | null;
+  setSystemMetrics: (metrics: SystemMetrics | null) => void;
   isSystemMonitoring: boolean;
   setIsSystemMonitoring: (monitoring: boolean) => void;
 
@@ -66,16 +68,6 @@ const getStoredTheme = (): ThemeMode => {
   return 'dark';
 };
 
-const getStoredMemories = (): MemoryItem[] => {
-  try {
-    const saved = localStorage.getItem('jarvis-memories');
-    if (saved) return JSON.parse(saved);
-  } catch {
-    // fallback
-  }
-  return INITIAL_MEMORIES;
-};
-
 const getStoredPreferences = (): UserPreferences => {
   try {
     const saved = localStorage.getItem('jarvis-preferences');
@@ -84,41 +76,6 @@ const getStoredPreferences = (): UserPreferences => {
     // fallback
   }
   return DEFAULT_PREFERENCES;
-};
-
-const initialSystemMetrics: SystemMetrics = {
-  cpu: {
-    processor: 'Intel(R) Core(TM) i7 / i5 Processor (12th-14th Gen)',
-    usage: 18.4,
-    cores: 8,
-    logical_processors: 16,
-  },
-  memory: {
-    total_gb: 16.0,
-    used_gb: 7.2,
-    available_gb: 8.8,
-    usage_percent: 45.0,
-  },
-  disk: {
-    total_gb: 512.0,
-    used_gb: 218.4,
-    free_gb: 293.6,
-    usage_percent: 42.6,
-  },
-  battery: {
-    available: true,
-    percentage: 84,
-    plugged_in: true,
-    status: 'Charging (AC Connected)',
-    time_left_seconds: 9600,
-  },
-  os: {
-    platform: 'Windows',
-    release: '11 Pro 64-bit',
-    arch: 'x64',
-    hostname: 'JARVIS-WORKSTATION',
-  },
-  timestamp: new Date().toISOString(),
 };
 
 export const useJarvisStore = create<JarvisStore>((set) => ({
@@ -151,14 +108,7 @@ export const useJarvisStore = create<JarvisStore>((set) => ({
   currentTranscript: '',
   setCurrentTranscript: (currentTranscript) => set({ currentTranscript }),
 
-  messages: [
-    {
-      id: 'init-1',
-      sender: 'jarvis',
-      text: 'Good day, Sir. All JARVIS neural sub-systems are online and standing by. How may I be of assistance?',
-      timestamp: '17:30:00',
-    },
-  ],
+  messages: [],
   addMessage: (msg) =>
     set((state) => {
       const newMessage: ChatMessage = {
@@ -175,33 +125,21 @@ export const useJarvisStore = create<JarvisStore>((set) => ({
     }),
   clearMessages: () => set({ messages: [] }),
 
-  memories: getStoredMemories(),
-  addMemory: (category, content) =>
-    set((state) => {
-      const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
-      const newMemory: MemoryItem = {
-        id: Date.now(),
-        category,
-        content: content.trim(),
-        created_at: now,
-        updated_at: now,
-      };
-      const updated = [newMemory, ...state.memories];
-      localStorage.setItem('jarvis-memories', JSON.stringify(updated));
-      return { memories: updated };
-    }),
-  deleteMemory: (id) =>
-    set((state) => {
-      const updated = state.memories.filter((m) => m.id !== id);
-      localStorage.setItem('jarvis-memories', JSON.stringify(updated));
-      return { memories: updated };
-    }),
-
-  systemMetrics: initialSystemMetrics,
-  setSystemMetrics: (metrics) =>
+  memories: [],
+  isLoadingMemories: false,
+  setIsLoadingMemories: (isLoadingMemories) => set({ isLoadingMemories }),
+  setMemories: (memories) => set({ memories }),
+  addMemoryRecord: (memory) =>
     set((state) => ({
-      systemMetrics: { ...state.systemMetrics, ...metrics },
+      memories: [memory, ...state.memories.filter((m) => m.id !== memory.id)],
     })),
+  deleteMemoryRecord: (id) =>
+    set((state) => ({
+      memories: state.memories.filter((m) => m.id !== id),
+    })),
+
+  systemMetrics: null,
+  setSystemMetrics: (systemMetrics) => set({ systemMetrics }),
   isSystemMonitoring: true,
   setIsSystemMonitoring: (isSystemMonitoring) => set({ isSystemMonitoring }),
 

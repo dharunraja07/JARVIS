@@ -1,19 +1,84 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useJarvisStore } from '../store/useJarvisStore';
 import type { MemoryCategory } from '../types';
 import { MemoryCard } from '../components/memory/MemoryCard';
 import { MemoryStats } from '../components/memory/MemoryStats';
 import { AddMemoryModal } from '../components/memory/AddMemoryModal';
-import { Brain, Plus, Search } from 'lucide-react';
+import { memoryService } from '../services/api/memoryService';
+import { Brain, Plus, Search, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '../components/common/Button';
+import { Badge } from '../components/common/Badge';
 
 export const Memory: React.FC = () => {
-  const { memories, addMemory, deleteMemory, showToast } = useJarvisStore();
+  const {
+    memories,
+    setMemories,
+    addMemoryRecord,
+    deleteMemoryRecord,
+    isLoadingMemories,
+    setIsLoadingMemories,
+    showToast,
+  } = useJarvisStore();
+
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isBackendConnected, setIsBackendConnected] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const categories = ['All', 'Education', 'Career', 'Projects', 'Preferences', 'Personal'];
+
+  const loadMemories = useCallback(async () => {
+    setIsLoadingMemories(true);
+    setErrorMessage(null);
+    try {
+      const res = await memoryService.fetchMemories();
+      setMemories(res.memories);
+      setIsBackendConnected(res.isLiveBackend);
+      if (!res.isLiveBackend) {
+        setErrorMessage(
+          'Companion server is not running on http://127.0.0.1:8000. Start the backend companion to access real SQLite memory.'
+        );
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to query memory store.';
+      setErrorMessage(msg);
+      setIsBackendConnected(false);
+    } finally {
+      setIsLoadingMemories(false);
+    }
+  }, [setIsLoadingMemories, setMemories]);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      setIsLoadingMemories(true);
+      setErrorMessage(null);
+      try {
+        const res = await memoryService.fetchMemories();
+        if (active) {
+          setMemories(res.memories);
+          setIsBackendConnected(res.isLiveBackend);
+          if (!res.isLiveBackend) {
+            setErrorMessage(
+              'Companion server is not running on http://127.0.0.1:8000. Start the backend companion to access real SQLite memory.'
+            );
+          }
+        }
+      } catch (err: unknown) {
+        if (active) {
+          const msg = err instanceof Error ? err.message : 'Failed to query memory store.';
+          setErrorMessage(msg);
+          setIsBackendConnected(false);
+        }
+      } finally {
+        if (active) setIsLoadingMemories(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [setIsLoadingMemories, setMemories]);
 
   const filteredMemories = useMemo(() => {
     return memories.filter((mem) => {
@@ -27,14 +92,34 @@ export const Memory: React.FC = () => {
     });
   }, [memories, selectedCategory, searchQuery]);
 
-  const handleAddMemory = (category: MemoryCategory, content: string) => {
-    addMemory(category, content);
-    showToast('Memory successfully saved to persistent neural index.', 'success');
+  const handleAddMemory = async (category: MemoryCategory, content: string) => {
+    try {
+      const res = await memoryService.createMemory(category, content);
+      if (res.success && res.memory) {
+        addMemoryRecord(res.memory);
+        showToast('Memory successfully indexed into SQLite database.', 'success');
+      } else {
+        showToast(res.error || 'Failed to save memory to backend database.', 'error');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Database error.';
+      showToast(msg, 'error');
+    }
   };
 
-  const handleDeleteMemory = (id: number) => {
-    deleteMemory(id);
-    showToast('Memory record deleted.', 'info');
+  const handleDeleteMemory = async (id: number) => {
+    try {
+      const res = await memoryService.deleteMemory(id);
+      if (res.success) {
+        deleteMemoryRecord(id);
+        showToast('Memory record deleted from SQLite database.', 'info');
+      } else {
+        showToast(res.error || 'Failed to delete memory record.', 'error');
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Database error.';
+      showToast(msg, 'error');
+    }
   };
 
   return (
@@ -50,19 +135,42 @@ export const Memory: React.FC = () => {
               Persistent Neural Memory
             </h2>
             <p className="text-xs font-mono text-slate-400">
-              SQLITE DATABASE // JARVIS_MEMORY.DB // CONTEXT INJECTION
+              REAL SQLITE DATABASE // JARVIS_MEMORY.DB // PERSISTENT RETRIEVAL
             </p>
           </div>
         </div>
 
-        <Button
-          variant="glow"
-          onClick={() => setIsAddModalOpen(true)}
-          icon={<Plus size={16} />}
-        >
-          Add New Memory
-        </Button>
+        <div className="flex items-center gap-3">
+          <Badge variant={isBackendConnected ? 'emerald' : 'amber'} pulse={isBackendConnected}>
+            {isBackendConnected ? 'SQLITE LIVE BACKEND' : 'BACKEND OFFLINE'}
+          </Badge>
+
+          <button
+            onClick={loadMemories}
+            disabled={isLoadingMemories}
+            className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+            title="Refresh memory store"
+          >
+            <RefreshCw size={16} className={isLoadingMemories ? 'animate-spin' : ''} />
+          </button>
+
+          <Button
+            variant="glow"
+            onClick={() => setIsAddModalOpen(true)}
+            icon={<Plus size={16} />}
+          >
+            Add New Memory
+          </Button>
+        </div>
       </div>
+
+      {/* Backend Status Warning if offline */}
+      {errorMessage && (
+        <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-500/40 text-amber-300 text-xs font-mono flex items-center gap-2.5">
+          <AlertCircle size={16} className="flex-shrink-0" />
+          <span>{errorMessage}</span>
+        </div>
+      )}
 
       {/* Memory Statistics */}
       <MemoryStats memories={memories} />
@@ -100,20 +208,32 @@ export const Memory: React.FC = () => {
       </div>
 
       {/* Memories Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredMemories.map((mem) => (
-          <MemoryCard key={mem.id} memory={mem} onDelete={handleDeleteMemory} />
-        ))}
-      </div>
+      {isLoadingMemories ? (
+        <div className="p-12 text-center rounded-2xl glass-panel border border-slate-800">
+          <RefreshCw size={24} className="mx-auto text-cyan-400 animate-spin" />
+          <p className="text-xs font-mono text-slate-400 mt-2">
+            QUERYING SQLITE MEMORY STORE...
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredMemories.map((mem) => (
+            <MemoryCard key={mem.id} memory={mem} onDelete={handleDeleteMemory} />
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredMemories.length === 0 && (
+      {!isLoadingMemories && filteredMemories.length === 0 && (
         <div className="p-12 text-center rounded-2xl glass-panel border border-slate-800 space-y-3">
           <Brain size={36} className="mx-auto text-cyan-400/40" />
-          <h4 className="text-base font-semibold text-slate-300">No memories found</h4>
+          <h4 className="text-base font-semibold text-slate-300">
+            {isBackendConnected ? 'No memories found' : 'Database Offline'}
+          </h4>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            No memory entries match your search query or category filter. Try clearing your search
-            or adding a new memory record.
+            {isBackendConnected
+              ? 'No memory records match your filter. Click "Add New Memory" to record a fact or instruction for JARVIS.'
+              : 'Launch the companion server (uv run python src/companion_server.py) to access and manage your SQLite memories.'}
           </p>
         </div>
       )}

@@ -38,10 +38,12 @@ export const Home: React.FC = () => {
 
         <div className="flex items-center gap-4 text-slate-400">
           <span className="flex items-center gap-1.5">
-            <Cpu size={13} className="text-cyan-400" /> CPU: {systemMetrics.cpu.usage}%
+            <Cpu size={13} className={systemMetrics ? 'text-cyan-400' : 'text-slate-600'} />{' '}
+            CPU: {systemMetrics ? `${systemMetrics.cpu.usage}%` : 'OFFLINE'}
           </span>
           <span className="flex items-center gap-1.5">
-            <Activity size={13} className="text-emerald-400" /> MEM: {systemMetrics.memory.used_gb} GB
+            <Activity size={13} className={systemMetrics ? 'text-emerald-400' : 'text-slate-600'} />{' '}
+            MEM: {systemMetrics ? `${systemMetrics.memory.used_gb} GB` : 'OFFLINE'}
           </span>
         </div>
       </div>

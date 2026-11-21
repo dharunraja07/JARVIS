@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useJarvisStore } from '../store/useJarvisStore';
 import { livekitService } from '../services/livekit/livekitService';
 import type { AssistantState } from '../types';
@@ -16,112 +16,110 @@ export function useVoiceSession() {
     preferences,
   } = useJarvisStore();
 
-  const simulateJarvisVoiceResponse = useCallback(
-    (prompt: string) => {
-      setAssistantState('processing');
-
-      setTimeout(() => {
-        setAssistantState('speaking');
-
-        let reply = "I have processed your query, Sir. All systems operating at optimal parameters.";
-        const lower = prompt.toLowerCase();
-
-        if (lower.includes('weather')) {
-          reply = "Checking atmospheric conditions: Expect moderate temperatures and clear skies today.";
-        } else if (lower.includes('system') || lower.includes('cpu') || lower.includes('ram')) {
-          reply = "Workstation diagnostics report nominal loads across all 16 logical cores. Memory consumption is stable.";
-        } else if (lower.includes('news')) {
-          reply = "Latest intelligence reports highlight breakthroughs in multimodal neural agent frameworks.";
-        } else if (lower.includes('remember') || lower.includes('memory')) {
-          reply = "Understood, Sir. I have indexed that observation into my persistent neural memory bank.";
-        } else if (lower.includes('hello') || lower.includes('hi') || lower.includes('jarvis')) {
-          reply = "Good day, Sir. I am listening and ready for your command.";
-        }
-
-        addMessage({ sender: 'jarvis', text: reply });
-
-        // Reset state after speaking duration
-        setTimeout(() => {
-          setAssistantState('idle');
-        }, 2800);
-      }, 1000);
-    },
-    [setAssistantState, addMessage]
-  );
+  const [isLiveKitConnected, setIsLiveKitConnected] = useState(false);
 
   useEffect(() => {
     livekitService.setCallbacks({
       onStateChange: (state: AssistantState) => {
         setAssistantState(state);
+        setIsLiveKitConnected(livekitService.isConnected());
       },
       onAudioLevel: (level: number) => {
         setAudioLevel(level);
       },
-      onTranscript: (text: string, isFinal: boolean) => {
-        setCurrentTranscript(text);
-        if (isFinal && text.trim()) {
-          addMessage({ sender: 'user', text });
-          simulateJarvisVoiceResponse(text);
+      onTranscript: (text: string, isFinal: boolean, sender: 'user' | 'jarvis') => {
+        if (!text.trim()) return;
+
+        if (isFinal) {
+          addMessage({ sender, text });
+          setCurrentTranscript('');
+        } else {
+          setCurrentTranscript(text);
         }
       },
       onError: (err: string) => {
         showToast(err, 'error');
       },
     });
+
+    return () => {
+      // Don't disconnect on brief tab switches
+    };
   }, [
     setAssistantState,
     setAudioLevel,
     setCurrentTranscript,
     addMessage,
     showToast,
-    simulateJarvisVoiceResponse,
   ]);
 
-  const toggleMic = useCallback(async () => {
-    if (assistantState === 'listening') {
-      livekitService.disableMicrophone();
-      setAssistantState('idle');
-    } else {
-      const ok = await livekitService.enableMicrophone();
-      if (!ok) {
-        // Fallback simulation toggle
-        setAssistantState('listening');
-        showToast('Microphone activated in local voice capture mode.', 'info');
+  const connectToVoice = useCallback(async () => {
+    const companionUrl = preferences.companionApiUrl || 'http://127.0.0.1:8000';
+    try {
+      showToast('Connecting to LiveKit Voice Mesh...', 'info');
+      const success = await livekitService.fetchTokenAndConnect(companionUrl, 'jarvis-room');
+      if (success) {
+        showToast('Connected to JARVIS voice session.', 'success');
+        setIsLiveKitConnected(true);
       }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Voice connection failed.';
+      showToast(msg, 'error');
     }
-  }, [assistantState, setAssistantState, showToast]);
+  }, [preferences.companionApiUrl, showToast]);
 
-  const sendTextMessage = useCallback(
-    (text: string) => {
-      if (!text.trim()) return;
-      addMessage({ sender: 'user', text });
-      simulateJarvisVoiceResponse(text);
-    },
-    [addMessage, simulateJarvisVoiceResponse]
-  );
+  const disconnectVoice = useCallback(async () => {
+    await livekitService.disconnect();
+    setIsLiveKitConnected(false);
+    showToast('Voice session disconnected.', 'info');
+  }, [showToast]);
 
-  const connectLiveKit = useCallback(async () => {
-    const { livekitServerUrl, livekitToken } = preferences;
-    if (!livekitToken) {
-      showToast('Please provide a LiveKit Token in Settings or use Local Voice Mode.', 'warning');
+  const toggleMic = useCallback(async () => {
+    if (!livekitService.isConnected()) {
+      await connectToVoice();
       return;
     }
-    await livekitService.connect(livekitServerUrl, livekitToken);
-  }, [preferences, showToast]);
 
-  const disconnectLiveKit = useCallback(async () => {
-    await livekitService.disconnect();
-  }, []);
+    if (livekitService.isMicrophoneActive()) {
+      await livekitService.disableMicrophone();
+    } else {
+      await livekitService.enableMicrophone();
+    }
+  }, [connectToVoice]);
+
+  const sendTextMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim()) return;
+
+      // Add user message to UI
+      addMessage({ sender: 'user', text });
+
+      if (livekitService.isConnected()) {
+        const sent = await livekitService.sendTextMessage(text);
+        if (!sent) {
+          showToast('Failed to dispatch message to LiveKit room.', 'warning');
+        }
+      } else {
+        // Not connected to LiveKit: inform user cleanly
+        showToast(
+          'LiveKit Agent not connected. Click the microphone or connect in Settings to initiate voice dialogue.',
+          'info'
+        );
+      }
+    },
+    [addMessage, showToast]
+  );
 
   return {
     assistantState,
     audioLevel,
     currentTranscript,
     isListening: assistantState === 'listening',
+    isLiveKitConnected,
+    connectToVoice,
+    disconnectVoice,
     toggleMic,
     sendTextMessage,
-    connectLiveKit,
-    disconnectLiveKit,
     setAssistantState,
   };
 }
