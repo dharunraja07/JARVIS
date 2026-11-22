@@ -1,8 +1,8 @@
-
 import platform
-import psutil
 import shutil
 from datetime import datetime
+
+import psutil
 
 
 def get_cpu_info():
@@ -18,9 +18,9 @@ def get_memory_info():
     memory = psutil.virtual_memory()
 
     return {
-        "total_gb": round(memory.total / (1024 ** 3), 2),
-        "used_gb": round(memory.used / (1024 ** 3), 2),
-        "available_gb": round(memory.available / (1024 ** 3), 2),
+        "total_gb": round(memory.total / (1024**3), 2),
+        "used_gb": round(memory.used / (1024**3), 2),
+        "available_gb": round(memory.available / (1024**3), 2),
         "usage_percent": memory.percent,
     }
 
@@ -29,9 +29,9 @@ def get_disk_info():
     disk = shutil.disk_usage("C:\\")
 
     return {
-        "total_gb": round(disk.total / (1024 ** 3), 2),
-        "used_gb": round(disk.used / (1024 ** 3), 2),
-        "free_gb": round(disk.free / (1024 ** 3), 2),
+        "total_gb": round(disk.total / (1024**3), 2),
+        "used_gb": round(disk.used / (1024**3), 2),
+        "free_gb": round(disk.free / (1024**3), 2),
         "usage_percent": round((disk.used / disk.total) * 100, 2),
     }
 
@@ -83,17 +83,21 @@ def get_system_report():
     ]
 
     if battery["available"]:
-        report.extend([
-            f"Battery: {battery['percentage']}%",
-            f"Power: {battery['status']}",
-        ])
+        report.extend(
+            [
+                f"Battery: {battery['percentage']}%",
+                f"Power: {battery['status']}",
+            ]
+        )
     else:
         report.append(battery["message"])
 
-    report.extend([
-        "",
-        f"Operating System: {platform.system()} {platform.release()}",
-        f"Architecture: {platform.machine()}",
-    ])
+    report.extend(
+        [
+            "",
+            f"Operating System: {platform.system()} {platform.release()}",
+            f"Architecture: {platform.machine()}",
+        ]
+    )
 
     return "\n".join(report)

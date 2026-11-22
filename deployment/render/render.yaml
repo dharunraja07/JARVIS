@@ -1,0 +1,65 @@
+# ==============================================================================
+# J.A.R.V.I.S. Render Infrastructure Blueprint
+# Deploys Cloud Gateway Web Service and Background LiveKit Agent Worker
+# ==============================================================================
+services:
+  # 1. Cloud Gateway REST API (Web Service)
+  - type: web
+    name: jarvis-cloud-gateway
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: uv sync
+    startCommand: uv run python src/cloud_server.py
+    healthCheckPath: /api/health/liveness
+    envVars:
+      - key: JARVIS_ENV
+        value: production
+      - key: JARVIS_CLOUD_HOST
+        value: 0.0.0.0
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
+      - key: JARVIS_AUTH_KEY
+        generateValue: true
+      - key: JARVIS_DEVICE_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: JARVIS_ALLOWED_ORIGINS
+        value: "*"
+
+  # 2. LiveKit Agent Worker (Background Worker)
+  - type: worker
+    name: jarvis-livekit-agent
+    env: python
+    region: oregon
+    plan: free
+    branch: main
+    buildCommand: uv sync && uv run --module livekit.agents download-files
+    startCommand: uv run src/agent.py start
+    envVars:
+      - key: LIVEKIT_URL
+        fromService:
+          type: web
+          name: jarvis-cloud-gateway
+          envVarKey: LIVEKIT_URL
+      - key: LIVEKIT_API_KEY
+        fromService:
+          type: web
+          name: jarvis-cloud-gateway
+          envVarKey: LIVEKIT_API_KEY
+      - key: LIVEKIT_API_SECRET
+        fromService:
+          type: web
+          name: jarvis-cloud-gateway
+          envVarKey: LIVEKIT_API_SECRET
+      - key: DATABASE_URL
+        fromService:
+          type: web
+          name: jarvis-cloud-gateway
+          envVarKey: DATABASE_URL

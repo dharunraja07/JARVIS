@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 from unittest.mock import patch
-import pytest
+
 from aiohttp.test_utils import AioHTTPTestCase
 
 # Add src to sys.path
@@ -22,12 +22,26 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
         assert "service" in data
         assert data["livekit_configured"] is True
 
+    async def test_liveness_and_readiness_probes(self):
+        # Liveness
+        live_resp = await self.client.request("GET", "/api/health/liveness")
+        assert live_resp.status == 200
+        live_data = await live_resp.json()
+        assert live_data["status"] == "alive"
+
+        # Readiness
+        ready_resp = await self.client.request("GET", "/api/health/readiness")
+        assert ready_resp.status == 200
+        ready_data = await ready_resp.json()
+        assert ready_data["status"] == "ready"
+        assert ready_data["database"] == "healthy"
+
     async def test_auth_login_and_verify(self):
         # 1. Login with valid master key
         login_resp = await self.client.request(
             "POST",
             "/api/auth/login",
-            json={"key": "jarvis-master-key-2026", "device_type": "android"}
+            json={"key": "jarvis-master-key-2026", "device_type": "android"},
         )
         assert login_resp.status == 200
         login_data = await login_resp.json()
@@ -37,9 +51,7 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
 
         # 2. Verify token
         verify_resp = await self.client.request(
-            "GET",
-            "/api/auth/verify",
-            headers={"Authorization": f"Bearer {token}"}
+            "GET", "/api/auth/verify", headers={"Authorization": f"Bearer {token}"}
         )
         assert verify_resp.status == 200
         verify_data = await verify_resp.json()
@@ -50,7 +62,7 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
         win_resp = await self.client.request(
             "GET",
             "/api/livekit/token?room=collab-room",
-            headers={"X-JARVIS-CLIENT-DEVICE": "windows"}
+            headers={"X-JARVIS-CLIENT-DEVICE": "windows"},
         )
         assert win_resp.status == 200
         win_data = await win_resp.json()
@@ -61,7 +73,7 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
         droid_resp = await self.client.request(
             "GET",
             "/api/livekit/token?room=collab-room",
-            headers={"X-JARVIS-CLIENT-DEVICE": "android"}
+            headers={"X-JARVIS-CLIENT-DEVICE": "android"},
         )
         assert droid_resp.status == 200
         droid_data = await droid_resp.json()
@@ -87,7 +99,7 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
             "POST",
             "/api/memories",
             headers={"X-JARVIS-CLIENT-DEVICE": "windows"},
-            json={"category": "Education", "content": test_content}
+            json={"category": "Education", "content": test_content},
         )
         assert save_resp.status == 201
         created_mem = await save_resp.json()
@@ -97,7 +109,7 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
         droid_resp = await self.client.request(
             "GET",
             f"/api/memories?q={test_content}",
-            headers={"X-JARVIS-CLIENT-DEVICE": "android"}
+            headers={"X-JARVIS-CLIENT-DEVICE": "android"},
         )
         assert droid_resp.status == 200
         droid_memories = await droid_resp.json()
@@ -109,7 +121,7 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
         del_resp = await self.client.request(
             "DELETE",
             f"/api/memories/{mem_id}",
-            headers={"X-JARVIS-CLIENT-DEVICE": "web"}
+            headers={"X-JARVIS-CLIENT-DEVICE": "web"},
         )
         assert del_resp.status == 200
         del_data = await del_resp.json()
@@ -117,9 +129,7 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
 
         # 4. Verify deletion on Windows
         win_verify = await self.client.request(
-            "GET",
-            "/api/memories",
-            headers={"X-JARVIS-CLIENT-DEVICE": "windows"}
+            "GET", "/api/memories", headers={"X-JARVIS-CLIENT-DEVICE": "windows"}
         )
         assert win_verify.status == 200
         all_mems = await win_verify.json()
@@ -130,11 +140,36 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
         mock_telemetry = {
             "device_id": "windows-companion",
             "hostname": "JARVIS-LAPTOP-WIN11",
-            "cpu": {"processor": "Intel i7-13700H", "usage": 14.2, "cores": 8, "logical_processors": 16},
-            "memory": {"total_gb": 16.0, "used_gb": 7.5, "available_gb": 8.5, "usage_percent": 46.8},
-            "disk": {"total_gb": 512.0, "used_gb": 220.0, "free_gb": 292.0, "usage_percent": 43.0},
-            "battery": {"available": True, "percentage": 92, "plugged_in": True, "status": "Charging"},
-            "os": {"platform": "Windows", "release": "11 Pro", "arch": "AMD64", "hostname": "JARVIS-LAPTOP-WIN11"},
+            "cpu": {
+                "processor": "Intel i7-13700H",
+                "usage": 14.2,
+                "cores": 8,
+                "logical_processors": 16,
+            },
+            "memory": {
+                "total_gb": 16.0,
+                "used_gb": 7.5,
+                "available_gb": 8.5,
+                "usage_percent": 46.8,
+            },
+            "disk": {
+                "total_gb": 512.0,
+                "used_gb": 220.0,
+                "free_gb": 292.0,
+                "usage_percent": 43.0,
+            },
+            "battery": {
+                "available": True,
+                "percentage": 92,
+                "plugged_in": True,
+                "status": "Charging",
+            },
+            "os": {
+                "platform": "Windows",
+                "release": "11 Pro",
+                "arch": "AMD64",
+                "hostname": "JARVIS-LAPTOP-WIN11",
+            },
         }
 
         # 1. Reject unauthorized heartbeat
@@ -142,7 +177,7 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
             "POST",
             "/api/companion/heartbeat",
             headers={"X-JARVIS-DEVICE-SECRET": "wrong-secret"},
-            json=mock_telemetry
+            json=mock_telemetry,
         )
         assert unauth_resp.status == 401
 
@@ -151,7 +186,7 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
             "POST",
             "/api/companion/heartbeat",
             headers={"X-JARVIS-DEVICE-SECRET": "jarvis-paired-device-secret-42"},
-            json=mock_telemetry
+            json=mock_telemetry,
         )
         assert auth_resp.status == 200
         auth_data = await auth_resp.json()
@@ -161,7 +196,7 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
         client_resp = await self.client.request(
             "GET",
             "/api/system?device_id=windows-companion",
-            headers={"X-JARVIS-CLIENT-DEVICE": "android"}
+            headers={"X-JARVIS-CLIENT-DEVICE": "android"},
         )
         assert client_resp.status == 200
         client_data = await client_resp.json()
@@ -187,7 +222,9 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
             "local_time": "12:00",
             "timezone": "Europe/London",
         }
-        with patch("cloud_server.weather.get_current_weather", return_value=mock_weather):
+        with patch(
+            "cloud_server.weather.get_current_weather", return_value=mock_weather
+        ):
             resp = await self.client.request("GET", "/api/weather?city=London")
             assert resp.status == 200
             data = await resp.json()
@@ -196,7 +233,9 @@ class TestCloudAndMultiDeviceAPI(AioHTTPTestCase):
     async def test_currency_endpoint(self):
         mock_rate = {"base": "USD", "quote": "INR", "rate": 86.5, "date": "2026-11-21"}
         with patch("cloud_server.currency.get_exchange_rate", return_value=mock_rate):
-            resp = await self.client.request("GET", "/api/currency?amount=50&from=USD&to=INR")
+            resp = await self.client.request(
+                "GET", "/api/currency?amount=50&from=USD&to=INR"
+            )
             assert resp.status == 200
             data = await resp.json()
             assert data["rate"] == 86.5

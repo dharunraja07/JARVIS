@@ -4,7 +4,8 @@ Backward-compatible wrapper pointing to cloud_server.py
 """
 
 import os
-from cloud_server import create_cloud_app, web, logger
+
+from cloud_server import create_cloud_app, logger, web
 
 if __name__ == "__main__":
     host = os.getenv("JARVIS_HOST", "0.0.0.0")

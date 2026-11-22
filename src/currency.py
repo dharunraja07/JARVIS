@@ -23,14 +23,10 @@ def get_exchange_rate(from_currency: str, to_currency: str) -> dict:
             "date": "Same currency",
         }
 
-    url = (
-        f"https://api.frankfurter.dev/v2/rate/"
-        f"{source}/{target}"
-    )
+    url = f"https://api.frankfurter.dev/v2/rate/{source}/{target}"
 
     request = urllib.request.Request(
-        url,
-        headers={"User-Agent": "JARVIS-Personal-Assistant/1.0"}
+        url, headers={"User-Agent": "JARVIS-Personal-Assistant/1.0"}
     )
 
     with urllib.request.urlopen(request, timeout=15) as response:
@@ -44,11 +40,7 @@ def get_exchange_rate(from_currency: str, to_currency: str) -> dict:
     }
 
 
-def convert_currency(
-    amount: float,
-    from_currency: str,
-    to_currency: str
-) -> dict:
+def convert_currency(amount: float, from_currency: str, to_currency: str) -> dict:
     """Convert an amount using the latest available reference rate."""
 
     if amount <= 0:
@@ -68,19 +60,11 @@ def convert_currency(
     }
 
 
-def format_conversion(
-    amount: float,
-    from_currency: str,
-    to_currency: str
-) -> str:
+def format_conversion(amount: float, from_currency: str, to_currency: str) -> str:
     """Create a readable currency conversion report."""
 
     try:
-        result = convert_currency(
-            amount,
-            from_currency,
-            to_currency
-        )
+        result = convert_currency(amount, from_currency, to_currency)
 
         return (
             f"Currency Conversion\n"
@@ -110,13 +94,7 @@ if __name__ == "__main__":
         from_currency = input("From currency (e.g. USD): ")
         to_currency = input("To currency (e.g. INR): ")
 
-        print(
-            "\n" + format_conversion(
-                amount,
-                from_currency,
-                to_currency
-            )
-        )
+        print("\n" + format_conversion(amount, from_currency, to_currency))
 
     except ValueError as error:
         print(f"Input error: {error}")

@@ -1,12 +1,11 @@
-
 import re
 
 from memory_manager import get_all_memories
 
-
 # ==========================================
 # TEXT NORMALIZATION
 # ==========================================
+
 
 def tokenize(text: str) -> set[str]:
 
@@ -29,18 +28,44 @@ SYNONYMS = {
 
 
 STOP_WORDS = {
-    "what", "when", "where", "who", "why",
-    "how", "is", "am", "are", "the", "a",
-    "an", "my", "me", "i", "you", "do",
-    "did", "does", "can", "could", "would",
-    "tell", "about", "please", "jarvis",
-    "and", "in", "of", "to", "for",
+    "what",
+    "when",
+    "where",
+    "who",
+    "why",
+    "how",
+    "is",
+    "am",
+    "are",
+    "the",
+    "a",
+    "an",
+    "my",
+    "me",
+    "i",
+    "you",
+    "do",
+    "did",
+    "does",
+    "can",
+    "could",
+    "would",
+    "tell",
+    "about",
+    "please",
+    "jarvis",
+    "and",
+    "in",
+    "of",
+    "to",
+    "for",
 }
 
 
 # ==========================================
 # MEMORY RETRIEVAL
 # ==========================================
+
 
 def retrieve_relevant_memories(
     query: str,
@@ -60,25 +85,20 @@ def retrieve_relevant_memories(
     expanded_keywords = set(keywords)
 
     for keyword in keywords:
-        expanded_keywords.update(
-            SYNONYMS.get(keyword, set())
-        )
+        expanded_keywords.update(SYNONYMS.get(keyword, set()))
 
     memories = get_all_memories()
 
     ranked_memories = []
 
     for memory in memories:
-
         content_words = tokenize(memory["content"])
         category_words = tokenize(memory["category"])
 
         score = 0
 
         # Exact phrase matching
-        normalized_query = " ".join(
-            re.findall(r"[a-z0-9]+", query.lower())
-        )
+        normalized_query = " ".join(re.findall(r"[a-z0-9]+", query.lower()))
 
         normalized_content = " ".join(
             re.findall(r"[a-z0-9]+", memory["content"].lower())
@@ -89,7 +109,6 @@ def retrieve_relevant_memories(
 
         # Match original keywords
         for keyword in keywords:
-
             if keyword in content_words:
                 score += 3
 
@@ -98,7 +117,6 @@ def retrieve_relevant_memories(
 
         # Match expanded keywords
         for keyword in expanded_keywords - keywords:
-
             if keyword in content_words:
                 score += 2
 
@@ -106,11 +124,12 @@ def retrieve_relevant_memories(
                 score += 3
 
         if score > 0:
-
-            ranked_memories.append({
-                **memory,
-                "relevance_score": score,
-            })
+            ranked_memories.append(
+                {
+                    **memory,
+                    "relevance_score": score,
+                }
+            )
 
     # Highest relevance first
     ranked_memories.sort(
@@ -127,6 +146,7 @@ def retrieve_relevant_memories(
 # BUILD AI CONTEXT
 # ==========================================
 
+
 def build_memory_context(query: str) -> str:
 
     memories = retrieve_relevant_memories(query)
@@ -134,15 +154,10 @@ def build_memory_context(query: str) -> str:
     if not memories:
         return ""
 
-    context = [
-        "Relevant information remembered about the user:"
-    ]
+    context = ["Relevant information remembered about the user:"]
 
     for memory in memories:
-
-        context.append(
-            f"- [{memory['category']}] {memory['content']}"
-        )
+        context.append(f"- [{memory['category']}] {memory['content']}")
 
     return "\n".join(context)
 
@@ -152,7 +167,6 @@ def build_memory_context(query: str) -> str:
 # ==========================================
 
 if __name__ == "__main__":
-
     print("\n===== JARVIS INTELLIGENT MEMORY TEST =====")
 
     queries = [
@@ -163,24 +177,15 @@ if __name__ == "__main__":
     ]
 
     for query in queries:
-
         print(f"\nQuery: {query}")
 
         results = retrieve_relevant_memories(query)
 
         if results:
-
             for memory in results:
+                print(f"Match: [{memory['category']}] {memory['content']}")
 
-                print(
-                    f"Match: [{memory['category']}] "
-                    f"{memory['content']}"
-                )
-
-                print(
-                    f"Relevance Score: "
-                    f"{memory['relevance_score']}"
-                )
+                print(f"Relevance Score: {memory['relevance_score']}")
 
         else:
             print("No relevant memories found.")

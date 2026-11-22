@@ -7,18 +7,19 @@ Runs locally on Windows host:
 """
 
 import asyncio
-from datetime import datetime, timezone
 import json
 import logging
 import os
 import platform
-from pathlib import Path
-import urllib.request
+import sys
 import urllib.error
+import urllib.request
+from datetime import datetime, timezone
+from pathlib import Path
+
 from aiohttp import web
 from dotenv import load_dotenv
 
-import sys
 BASE_DIR = Path(__file__).resolve().parent
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
@@ -26,7 +27,7 @@ if str(BASE_DIR) not in sys.path:
 load_dotenv(BASE_DIR.parent / ".env.local")
 load_dotenv(BASE_DIR.parent / ".env")
 
-import system_monitor
+import system_monitor  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,8 +84,8 @@ async def heartbeat_loop():
                 method="POST",
             )
 
-            def send_req():
-                with urllib.request.urlopen(req, timeout=4) as resp:
+            def send_req(request=req):
+                with urllib.request.urlopen(request, timeout=4) as resp:
                     return resp.status
 
             status = await asyncio.to_thread(send_req)
@@ -114,12 +115,14 @@ async def handle_local_telemetry(request: web.Request) -> web.Response:
 
 
 async def handle_local_health(request: web.Request) -> web.Response:
-    return web.json_response({
-        "status": "online",
-        "service": "JARVIS Local Windows Companion",
-        "device_id": DEVICE_ID,
-        "cloud_target": CLOUD_URL,
-    })
+    return web.json_response(
+        {
+            "status": "online",
+            "service": "JARVIS Local Windows Companion",
+            "device_id": DEVICE_ID,
+            "cloud_target": CLOUD_URL,
+        }
+    )
 
 
 def create_local_companion_app() -> web.Application:
@@ -138,7 +141,7 @@ async def main():
     await site.start()
 
     # Start background heartbeat dispatch task
-    asyncio.create_task(heartbeat_loop())
+    _heartbeat_task = asyncio.create_task(heartbeat_loop())  # noqa: RUF006
 
     # Keep running
     try:

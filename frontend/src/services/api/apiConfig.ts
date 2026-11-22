@@ -1,5 +1,5 @@
 export function getApiBaseUrl(): string {
-  // 1. Check user preference from storage
+  // 1. Check user preference from storage (manual override)
   try {
     const prefs = localStorage.getItem('jarvis-preferences');
     if (prefs) {
@@ -12,10 +12,10 @@ export function getApiBaseUrl(): string {
     // ignore
   }
 
-  // 2. Check Vite environment variable
-  const envUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
-  if (envUrl) {
-    return envUrl;
+  // 2. Check Vite build-time environment variable (e.g. Vercel deployment)
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim().replace(/\/+$/, '');
   }
 
   // 3. Dynamic origin detection for LAN mobile testing (e.g. http://192.168.x.x:5173 -> http://192.168.x.x:8000)

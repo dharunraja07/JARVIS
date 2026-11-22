@@ -1,8 +1,7 @@
 import json
 import urllib.parse
 import urllib.request
-from urllib.error import URLError, HTTPError
-
+from urllib.error import HTTPError, URLError
 
 WEATHER_CODES = {
     0: "Clear sky",
@@ -39,8 +38,7 @@ WEATHER_CODES = {
 def fetch_json(url: str) -> dict:
     """Fetch JSON data from an API."""
     request = urllib.request.Request(
-        url,
-        headers={"User-Agent": "JARVIS-Personal-Assistant/1.0"}
+        url, headers={"User-Agent": "JARVIS-Personal-Assistant/1.0"}
     )
 
     with urllib.request.urlopen(request, timeout=15) as response:
@@ -53,12 +51,9 @@ def get_coordinates(city: str) -> dict:
     if not city or not city.strip():
         raise ValueError("Please provide a city name.")
 
-    params = urllib.parse.urlencode({
-        "name": city.strip(),
-        "count": 1,
-        "language": "en",
-        "format": "json"
-    })
+    params = urllib.parse.urlencode(
+        {"name": city.strip(), "count": 1, "language": "en", "format": "json"}
+    )
 
     url = f"https://geocoding-api.open-meteo.com/v1/search?{params}"
     data = fetch_json(url)
@@ -84,21 +79,22 @@ def get_current_weather(city: str) -> dict:
 
     location = get_coordinates(city)
 
-    params = urllib.parse.urlencode({
-        "latitude": location["latitude"],
-        "longitude": location["longitude"],
-        "current": (
-            "temperature_2m,relative_humidity_2m,"
-            "apparent_temperature,precipitation,"
-            "weather_code,wind_speed_10m"
-        ),
-        "daily": (
-            "temperature_2m_max,temperature_2m_min,"
-            "precipitation_probability_max"
-        ),
-        "timezone": "auto",
-        "forecast_days": 1,
-    })
+    params = urllib.parse.urlencode(
+        {
+            "latitude": location["latitude"],
+            "longitude": location["longitude"],
+            "current": (
+                "temperature_2m,relative_humidity_2m,"
+                "apparent_temperature,precipitation,"
+                "weather_code,wind_speed_10m"
+            ),
+            "daily": (
+                "temperature_2m_max,temperature_2m_min,precipitation_probability_max"
+            ),
+            "timezone": "auto",
+            "forecast_days": 1,
+        }
+    )
 
     url = f"https://api.open-meteo.com/v1/forecast?{params}"
     data = fetch_json(url)
@@ -118,15 +114,9 @@ def get_current_weather(city: str) -> dict:
         "condition": WEATHER_CODES.get(code, "Unknown conditions"),
         "wind_speed": current.get("wind_speed_10m"),
         "precipitation": current.get("precipitation"),
-        "max_temperature": (
-            daily.get("temperature_2m_max", [None])[0]
-        ),
-        "min_temperature": (
-            daily.get("temperature_2m_min", [None])[0]
-        ),
-        "rain_probability": (
-            daily.get("precipitation_probability_max", [None])[0]
-        ),
+        "max_temperature": (daily.get("temperature_2m_max", [None])[0]),
+        "min_temperature": (daily.get("temperature_2m_min", [None])[0]),
+        "rain_probability": (daily.get("precipitation_probability_max", [None])[0]),
         "local_time": current.get("time"),
         "timezone": data.get("timezone"),
     }
@@ -143,9 +133,7 @@ def format_weather(city: str) -> str:
             weather["region"],
             weather["country"],
         ]
-        location_name = ", ".join(
-            part for part in location_parts if part
-        )
+        location_name = ", ".join(part for part in location_parts if part)
 
         return (
             f"Weather report for {location_name}\n"

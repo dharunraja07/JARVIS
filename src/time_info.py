@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
@@ -16,7 +16,7 @@ def get_time_info(timezone_name: str = "") -> dict:
             raise ValueError(
                 f"Unknown timezone: {timezone_name}. "
                 "Use an IANA timezone such as Asia/Kolkata or Europe/London."
-            )
+            ) from None
     else:
         tz = datetime.now().astimezone().tzinfo
 
@@ -54,8 +54,6 @@ if __name__ == "__main__":
     print("JARVIS Time Intelligence Test")
     print("-----------------------------")
 
-    timezone_name = input(
-        "Enter timezone (press Enter for your local time): "
-    ).strip()
+    timezone_name = input("Enter timezone (press Enter for your local time): ").strip()
 
     print("\n" + get_time_report(timezone_name))

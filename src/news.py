@@ -1,10 +1,8 @@
-
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
+from datetime import timezone
 from email.utils import parsedate_to_datetime
-from datetime import datetime, timezone
-
 
 GOOGLE_NEWS_BASE = "https://news.google.com/rss"
 
@@ -22,10 +20,7 @@ def fetch_feed(url: str) -> list[dict]:
     """Fetch and parse an RSS feed."""
 
     request = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "JARVIS-Personal-Assistant/1.0"
-        }
+        url, headers={"User-Agent": "JARVIS-Personal-Assistant/1.0"}
     )
 
     with urllib.request.urlopen(request, timeout=20) as response:
@@ -58,13 +53,15 @@ def fetch_feed(url: str) -> list[dict]:
             published = pub_date or "Publication date unavailable"
 
         if title and link:
-            news_items.append({
-                "title": title,
-                "source": source,
-                "link": link,
-                "published": published,
-                "description": description,
-            })
+            news_items.append(
+                {
+                    "title": title,
+                    "source": source,
+                    "link": link,
+                    "published": published,
+                    "description": description,
+                }
+            )
 
     return news_items
 
@@ -81,18 +78,17 @@ def get_news(category: str = "general", max_results: int = 5) -> list[dict]:
         url = BBC_FEEDS[category]
 
     elif category in ("general", "india news"):
-        url = (
-            f"{GOOGLE_NEWS_BASE}?"
-            "hl=en-IN&gl=IN&ceid=IN:en"
-        )
+        url = f"{GOOGLE_NEWS_BASE}?hl=en-IN&gl=IN&ceid=IN:en"
 
     else:
-        params = urllib.parse.urlencode({
-            "q": f"{category} when:7d",
-            "hl": "en-IN",
-            "gl": "IN",
-            "ceid": "IN:en",
-        })
+        params = urllib.parse.urlencode(
+            {
+                "q": f"{category} when:7d",
+                "hl": "en-IN",
+                "gl": "IN",
+                "ceid": "IN:en",
+            }
+        )
         url = f"{GOOGLE_NEWS_BASE}/search?{params}"
 
     results = fetch_feed(url)
@@ -138,8 +134,7 @@ if __name__ == "__main__":
     print("-----------------------------")
 
     category = input(
-        "Enter category (technology, india, world, business, "
-        "science, AI, or general): "
+        "Enter category (technology, india, world, business, science, AI, or general): "
     ).strip()
 
     print("\n" + format_news(category, 5))

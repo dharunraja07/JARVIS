@@ -13,6 +13,7 @@ dependencies = [
     "livekit-agents~=1.8",
     "livekit-plugins-ai-coustics~=0.3",
     "psutil>=7.2.2",
+    "psycopg[binary]>=3.1.0",
     "python-dotenv",
     "tzdata>=2026.6",
 ]
