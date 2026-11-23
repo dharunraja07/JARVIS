@@ -746,7 +746,7 @@ class Assistant(Agent):
 server = AgentServer()
 
 
-@server.rtc_session(agent_name="my-agent")
+@server.rtc_session()
 async def my_agent(ctx: JobContext):
 
     logger.info("JARVIS session starting.")
