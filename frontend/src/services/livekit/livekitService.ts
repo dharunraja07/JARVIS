@@ -106,8 +106,29 @@ class LiveKitVoiceService {
       // Connect to LiveKit Room
       await this.room.connect(url, token);
 
+      // Unlock browser audio playback
+      try {
+        await this.room.startAudio();
+      } catch (err) {
+        console.warn('[LiveKit] startAudio error:', err);
+      }
+
       // Enable microphone on room connection
       await this.enableMicrophone();
+
+      // Attach any tracks from participants already in the room
+      this.room.remoteParticipants.forEach((p) => {
+        p.trackPublications.forEach((pub) => {
+          if (pub.track && pub.track.kind === Track.Kind.Audio) {
+            const el = pub.track.attach();
+            el.autoplay = true;
+            el.style.display = 'none';
+            document.body.appendChild(el);
+            this.attachedAudioElements.push(el);
+            el.play().catch(() => {});
+          }
+        });
+      });
 
       this.callbacks?.onStateChange('idle');
       return true;
@@ -247,7 +268,13 @@ class LiveKitVoiceService {
         if (track.kind === Track.Kind.Audio) {
           const audioElement = track.attach();
           audioElement.autoplay = true;
+          audioElement.style.display = 'none';
+          document.body.appendChild(audioElement);
           this.attachedAudioElements.push(audioElement);
+
+          audioElement.play().catch((err) => {
+            console.warn('[LiveKit] Audio autoplay blocked:', err);
+          });
 
           // Listen for audio levels from remote track
           track.on('audioPlaybackStarted', () => {
