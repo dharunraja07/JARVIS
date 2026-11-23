@@ -1,11 +1,21 @@
 export function getApiBaseUrl(): string {
-  // 1. Check user preference from storage (manual override)
+  // 1. Check user preference from storage ONLY if it's an explicit custom URL (not the old localhost fallback)
   try {
     const prefs = localStorage.getItem('jarvis-preferences');
     if (prefs) {
       const parsed = JSON.parse(prefs);
-      if (parsed.companionApiUrl && parsed.companionApiUrl.trim()) {
-        return parsed.companionApiUrl.trim();
+      const custom = parsed.companionApiUrl?.trim();
+      // If user typed a custom URL that is NOT the old default 127.0.0.1:8000
+      if (custom && custom !== 'http://127.0.0.1:8000' && custom !== 'http://localhost:8000') {
+        return custom.replace(/\/+$/, '');
+      }
+      // If actually running on localhost, 127.0.0.1:8000 is acceptable
+      if (
+        custom &&
+        typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ) {
+        return custom.replace(/\/+$/, '');
       }
     }
   } catch {
@@ -23,8 +33,16 @@ export function getApiBaseUrl(): string {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
     if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      if (protocol === 'https:') {
+        return 'https://jarvis-sl7s.onrender.com';
+      }
       return `${protocol}//${hostname}:8000`;
     }
+  }
+
+  // 4. Default to deployed production Cloud Gateway if running on web
+  if (typeof window !== 'undefined' && window.location && window.location.protocol === 'https:') {
+    return 'https://jarvis-sl7s.onrender.com';
   }
 
   return 'http://127.0.0.1:8000';

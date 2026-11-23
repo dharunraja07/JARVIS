@@ -7,7 +7,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   voiceSpeed: 1.0,
   livekitServerUrl: '',
   livekitToken: '',
-  companionApiUrl: 'http://127.0.0.1:8000',
+  companionApiUrl: '',
   lowPowerMode: false,
   soundEffects: true,
 };

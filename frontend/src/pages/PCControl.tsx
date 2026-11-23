@@ -60,7 +60,7 @@ export const PCControl: React.FC = () => {
           </p>
           <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-cyan-300 flex items-center gap-2">
             <Terminal size={14} className="text-slate-400" />
-            <span>uv run python src/companion_server.py</span>
+            <span>uv run python src/windows_companion.py</span>
           </div>
         </div>
       )}

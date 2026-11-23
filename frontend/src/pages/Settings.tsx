@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Button } from '../components/common/Button';
 import { livekitService } from '../services/livekit/livekitService';
+import { getApiBaseUrl } from '../services/api/apiConfig';
 
 export const Settings: React.FC = () => {
   const { preferences, updatePreferences, showToast, assistantState } = useJarvisStore();
@@ -48,7 +49,7 @@ export const Settings: React.FC = () => {
     setTestingLiveKit(true);
     setGatewayStatus(null);
     try {
-      const companionUrl = form.companionApiUrl || 'http://127.0.0.1:8000';
+      const companionUrl = form.companionApiUrl?.trim() || getApiBaseUrl();
       const healthRes = await fetch(`${companionUrl}/api/health`);
       if (!healthRes.ok) {
         throw new Error(`Companion server returned HTTP ${healthRes.status}`);
@@ -189,7 +190,7 @@ export const Settings: React.FC = () => {
                 type="text"
                 value={form.companionApiUrl}
                 onChange={(e) => setForm({ ...form, companionApiUrl: e.target.value })}
-                placeholder="http://127.0.0.1:8000"
+                placeholder={getApiBaseUrl()}
                 className="w-full py-2.5 px-3 rounded-xl glass-panel border border-cyan-500/30 text-sm font-mono text-slate-100 focus:outline-none"
               />
               <p className="text-[11px] text-slate-400 mt-1">

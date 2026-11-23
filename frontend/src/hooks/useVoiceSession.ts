@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useJarvisStore } from '../store/useJarvisStore';
 import { livekitService } from '../services/livekit/livekitService';
+import { getApiBaseUrl } from '../services/api/apiConfig';
 import type { AssistantState } from '../types';
 
 export function useVoiceSession() {
@@ -54,7 +55,7 @@ export function useVoiceSession() {
   ]);
 
   const connectToVoice = useCallback(async () => {
-    const companionUrl = preferences.companionApiUrl || 'http://127.0.0.1:8000';
+    const companionUrl = preferences.companionApiUrl?.trim() || getApiBaseUrl();
     try {
       showToast('Connecting to LiveKit Voice Mesh...', 'info');
       const success = await livekitService.fetchTokenAndConnect(companionUrl, 'jarvis-room');

@@ -37,7 +37,7 @@ export const Memory: React.FC = () => {
       setIsBackendConnected(res.isLiveBackend);
       if (!res.isLiveBackend) {
         setErrorMessage(
-          'Companion server is not running on http://127.0.0.1:8000. Start the backend companion to access real SQLite memory.'
+          `Memory service unreachable at ${memoryService.getCompanionUrl()}. Check backend gateway status.`
         );
       }
     } catch (err: unknown) {
@@ -61,7 +61,7 @@ export const Memory: React.FC = () => {
           setIsBackendConnected(res.isLiveBackend);
           if (!res.isLiveBackend) {
             setErrorMessage(
-              'Companion server is not running on http://127.0.0.1:8000. Start the backend companion to access real SQLite memory.'
+              `Memory service unreachable at ${memoryService.getCompanionUrl()}. Check backend gateway status.`
             );
           }
         }
